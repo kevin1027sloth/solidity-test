@@ -8,10 +8,12 @@ pragma solidity ^0.8.24;
 
 contract LogicVault {
     address public owner;
+    bool private initialized;
 
     function initialize(address _owner) external {
-        // BUG: no guard — anyone can (re)initialize and take over
+        require(!initialized, "already initialized");
         require(_owner != address(0), "zero");
+        initialized = true;
         owner = _owner;
     }
 

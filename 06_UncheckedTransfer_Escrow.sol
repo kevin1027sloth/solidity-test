@@ -22,13 +22,13 @@ contract Escrow {
     }
 
     function deposit(uint256 amount) external {
-        token.transferFrom(msg.sender, address(this), amount); // BUG: return ignored
+        require(token.transferFrom(msg.sender, address(this), amount), "tf failed");
         balance[msg.sender] += amount;
     }
 
     function withdraw(uint256 amount) external {
         require(balance[msg.sender] >= amount, "insufficient");
         balance[msg.sender] -= amount;
-        token.transfer(msg.sender, amount); // BUG: return ignored
+        require(token.transfer(msg.sender, amount), "t failed");
     }
 }

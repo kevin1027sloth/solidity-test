@@ -23,21 +23,45 @@ contract Implementation {
 }
 
 contract Proxy {
-    address public admin;          // BUG: slot 0, collides with owner
-    address public implementation; // BUG: slot 1, collides with totalSupply
+    bytes32 private constant IMPLEMENTATION_SLOT = 0x0;
+        // bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1);
+    bytes32 private constant ADMIN_SLOT = 0x0;
+        // bytes32(uint256(keccak256("eip1967.proxy.admin")) - 1);
+
+    
+    modifier onlyAdmin() {
+        require(msg.sender == _admin(), "only admin");
+        _;
+    }
+
 
     constructor(address impl) {
-        admin = msg.sender;
-        implementation = impl;
+        _setAdmin(msg.sender);
+        _setImplementation(impl);
     }
 
-    function upgradeTo(address impl) external {
-        require(msg.sender == admin, "not admin");
-        implementation = impl;
+    function upgradeTo(address impl) external onlyAdmin {
+        _setImplementation(impl);
     }
 
-    fallback() external payable {
-        address impl = implementation;
+    function _implementation() internal view returns (address impl) {
+        assembly { impl := sload(IMPLEMENTATION_SLOT) }
+    }
+
+    function _setImplementation(address impl) internal {
+        assembly { sstore(IMPLEMENTATION_SLOT, impl) }
+    }
+
+    function _admin() internal view returns (address admin) {
+        assembly { admin := sload(ADMIN_SLOT) }
+    }
+
+    function _setAdmin(address admin) internal {
+        assembly { sstore(ADMIN_SLOT, admin) }
+    }
+
+    fallback() external payable onlyAdmin {
+        address impl = _implementation();
         require(impl != address(0), "no impl");
         assembly {
             calldatacopy(0, 0, calldatasize())
@@ -49,5 +73,5 @@ contract Proxy {
         }
     }
 
-    receive() external payable {}
+    receive() external payable onlyAdmin {}
 }

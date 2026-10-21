@@ -9,15 +9,20 @@ pragma solidity ^0.8.24;
 
 contract Claimable {
     address public immutable owner;
+    mapping(address => uint256) public nonces;
 
     constructor(address _owner) payable {
         owner = _owner;
     }
 
     function claim(address account, uint256 amount, bytes calldata sig) external {
-        bytes32 h = keccak256(abi.encodePacked(account, amount)); // BUG: replayable
+        bytes32 h = keccak256(
+            abi.encodePacked(account, amount, nonces[account], block.chainid, address(this))
+        );
         h = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", h));
         require(_recover(h, sig) == owner, "bad sig");
+
+        nonces[account]++;
 
         (bool ok, ) = account.call{value: amount}("");
         require(ok, "send failed");

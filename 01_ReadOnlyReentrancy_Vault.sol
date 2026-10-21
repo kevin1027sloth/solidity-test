@@ -10,24 +10,39 @@ contract Vault {
     mapping(address => uint256) public shares;
     uint256 public totalShares;
 
+    uint256 private constant VIRTUAL_SHARES = 1e3;
+
+    bool private locked;
+
+    modifier nonReentrant() {
+        require(!locked, "reentrant");
+        locked = true;
+        _;
+        locked = false;
+    }
+
     function deposit() external payable {
         require(msg.value > 0, "zero");
-        uint256 minted = totalShares == 0
-            ? msg.value
-            : (msg.value * totalShares) / (address(this).balance - msg.value);
+        uint256 minted;
+        if (totalShares == 0) {
+            totalShares = VIRTUAL_SHARES;
+            minted = msg.value;
+        } else {
+            minted = (msg.value * totalShares) / (address(this).balance - msg.value);
+        }
         shares[msg.sender] += minted;
         totalShares += minted;
     }
 
-    function withdraw(uint256 shareAmount) external {
+    function withdraw(uint256 shareAmount) external nonReentrant {
         require(shares[msg.sender] >= shareAmount, "insufficient");
         uint256 ethOut = (shareAmount * address(this).balance) / totalShares;
 
-        (bool ok, ) = msg.sender.call{value: ethOut}("");
-        require(ok, "send failed");
-
         shares[msg.sender] -= shareAmount;
         totalShares -= shareAmount;
+
+        (bool ok, ) = msg.sender.call{value: ethOut}("");
+        require(ok, "send failed");
     }
 
     // Used by other protocols as a price oracle.

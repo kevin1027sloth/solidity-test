@@ -23,17 +23,12 @@ contract Airdrop {
         allocation[user] = amount;
     }
 
-    // BUG: unbounded push loop; one reverting recipient blocks everyone
-    function distribute() external {
-        for (uint256 i = 0; i < recipients.length; i++) {
-            address to = recipients[i];
-            uint256 amount = allocation[to];
-            if (amount == 0) continue;
-
-            allocation[to] = 0;
-            (bool ok, ) = to.call{value: amount}("");
-            require(ok, "send failed");
-        }
+    function claim() external {
+        uint256 amount = allocation[msg.sender];
+        require(amount > 0, "nothing to claim");
+        allocation[msg.sender] = 0;
+        (bool ok, ) = msg.sender.call{value: amount}("");
+        require(ok, "send failed");
     }
 
     receive() external payable {}

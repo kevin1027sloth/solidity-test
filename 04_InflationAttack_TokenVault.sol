@@ -19,6 +19,8 @@ contract TokenVault {
     uint256 public totalShares;
     mapping(address => uint256) public shares;
 
+    uint256 private constant MINIMUM_SHARES = 1e3;
+
     constructor(address _token) {
         token = IERC20(_token);
     }
@@ -28,8 +30,13 @@ contract TokenVault {
         uint256 balBefore = token.balanceOf(address(this));
         require(token.transferFrom(msg.sender, address(this), amount), "tf failed");
 
-        // BUG: no floor on first deposit + donation-manipulable balance
-        minted = totalShares == 0 ? amount : (amount * totalShares) / balBefore;
+        if (totalShares == 0) {
+            shares[address(0)] = MINIMUM_SHARES;
+            totalShares = MINIMUM_SHARES;
+            minted = amount;
+        } else {
+            minted = (amount * totalShares) / balBefore;
+        }
         require(minted > 0, "zero shares");
 
         shares[msg.sender] += minted;

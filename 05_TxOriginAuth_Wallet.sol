@@ -14,13 +14,13 @@ contract Wallet {
     }
 
     function withdraw(address payable to, uint256 amount) external {
-        require(tx.origin == owner, "not owner"); // BUG
+        require(msg.sender == owner, "not owner");
         (bool ok, ) = to.call{value: amount}("");
         require(ok, "send failed");
     }
 
     function transferOwnership(address newOwner) external {
-        require(tx.origin == owner, "not owner"); // BUG
+        require(msg.sender == owner, "not owner");
         require(newOwner != address(0), "zero");
         owner = newOwner;
     }
